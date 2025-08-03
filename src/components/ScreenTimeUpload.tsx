@@ -53,7 +53,7 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
       
       if (uploadedImage) {
         // Try AI-powered analysis for uploaded image
-        console.log('Processing uploaded image with AI...');
+        // Processing uploaded image with AI...
         try {
           processedData = await analyzeScreenTimeWithAI(uploadedImage);
           setAiResponse('AI analysis completed successfully!');
@@ -73,7 +73,7 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
         }
       } else if (manualData.totalTime) {
         // Use manual data as fallback
-        console.log('Using manual data entry...');
+        // Using manual data entry...
         processedData = createManualScreenTimeData(
           manualData.totalTime,
           manualData.date,
