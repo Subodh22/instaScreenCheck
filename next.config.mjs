@@ -1,7 +1,24 @@
 import withPWA from 'next-pwa';
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.gstatic.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
+};
 
 const config = withPWA({
   dest: 'public',
