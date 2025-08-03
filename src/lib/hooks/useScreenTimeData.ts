@@ -60,7 +60,7 @@ export function useScreenTimeData(userId?: string, date?: string): ScreenTimeDat
 
   useEffect(() => {
     fetchData();
-  }, [userId, date]);
+  }, [userId, date, fetchData]);
 
   return {
     entries,

@@ -6,6 +6,7 @@ import { FriendsTab } from '../components/FriendsTab';
 import { CompetitionsTab } from '../components/CompetitionsTab';
 import { LoginPage } from '../components/LoginPage';
 import { Clock, Users, Trophy, LogOut } from 'lucide-react';
+import Image from 'next/image';
 import { auth } from '../lib/firebase/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
@@ -85,9 +86,11 @@ export default function App() {
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {user?.photoURL && (
-            <img 
+            <Image 
               src={user.photoURL} 
               alt="Profile" 
+              width={32}
+              height={32}
               className="w-8 h-8 rounded-full"
             />
           )}

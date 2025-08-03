@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Upload, Camera, Database, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import { analyzeScreenTimeWithAI, createManualScreenTimeData, ExtractedScreenTimeData } from '../lib/aiOcrUtils';
 import { useAuth } from '../lib/hooks/useAuth';
@@ -235,9 +236,11 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
             <div className="space-y-2">
               <Label className="text-sm font-medium">Uploaded Screenshot:</Label>
               <div className="relative">
-                <img 
+                <Image 
                   src={uploadedImage} 
                   alt="Screen Time Screenshot" 
+                  width={400}
+                  height={192}
                   className="w-full max-h-48 object-contain rounded-lg border border-gray-200"
                 />
                 <button

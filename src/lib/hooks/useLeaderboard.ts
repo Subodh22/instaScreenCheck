@@ -54,7 +54,7 @@ export function useLeaderboard(userId?: string): LeaderboardData {
 
   useEffect(() => {
     fetchLeaderboard();
-  }, [userId]);
+  }, [userId, fetchLeaderboard]);
 
   return {
     leaderboard,

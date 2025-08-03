@@ -167,7 +167,7 @@ export function useFriends(userId?: string): FriendsData {
 
   useEffect(() => {
     fetchFriendsData();
-  }, [userId]);
+  }, [userId, fetchFriendsData]);
 
   return {
     friends,

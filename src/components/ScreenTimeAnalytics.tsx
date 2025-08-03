@@ -232,7 +232,7 @@ export const ScreenTimeAnalytics: React.FC = () => {
               </div>
               <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                 <p className="text-sm text-blue-800">
-                  This shows the proportion of time you've spent actively using your device 
+                  This shows the proportion of time you&apos;ve spent actively using your device 
                   versus free time during this {timeRange}.
                 </p>
               </div>
@@ -248,7 +248,7 @@ export const ScreenTimeAnalytics: React.FC = () => {
         >
           <h3 className="text-lg font-semibold mb-4">Digital Wellness Insights</h3>
           <div className="space-y-2 text-sm">
-            <p>• You've been active for {formatDurationShort(totalTimeThisPeriod)} this {timeRange}</p>
+            <p>• You&apos;ve been active for {formatDurationShort(totalTimeThisPeriod)} this {timeRange}</p>
             <p>• Average daily usage: {formatDurationShort(averageDailyTime)}</p>
             <p>• Total sessions: {totalSessionsThisPeriod}</p>
             {averageDailyTime > 4 * 60 * 60 * 1000 && (
