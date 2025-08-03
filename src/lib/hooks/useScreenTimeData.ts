@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export interface ScreenTimeEntry {
   id: string;
@@ -24,7 +24,7 @@ export function useScreenTimeData(userId?: string, date?: string): ScreenTimeDat
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -56,7 +56,7 @@ export function useScreenTimeData(userId?: string, date?: string): ScreenTimeDat
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, date]);
 
   useEffect(() => {
     fetchData();
@@ -76,7 +76,6 @@ function isTodayEntry(dateString: string): boolean {
   
   // Simple check: if it contains "Today", it's today
   if (dateString.toLowerCase().includes('today')) {
-    console.log('Date match found (Today):', dateString);
     return true;
   }
   
@@ -85,11 +84,9 @@ function isTodayEntry(dateString: string): boolean {
   const todayMonth = today.toLocaleDateString('en-US', { month: 'long' });
   
   if (dateString.includes(todayDay.toString()) && dateString.includes(todayMonth)) {
-    console.log('Date match found (day + month):', dateString);
     return true;
   }
   
-  console.log('No date match:', dateString);
   return false;
 }
 

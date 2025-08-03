@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export interface User {
   firebase_uid: string;
@@ -38,7 +38,7 @@ export function useFriends(userId?: string): FriendsData {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchFriendsData = async () => {
+  const fetchFriendsData = useCallback(async () => {
     if (!userId) {
       setLoading(false);
       return;
@@ -63,7 +63,7 @@ export function useFriends(userId?: string): FriendsData {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   const sendFriendRequest = async (receiverEmail: string): Promise<{ success: boolean; message: string }> => {
     if (!userId) {

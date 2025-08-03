@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export interface LeaderboardEntry {
   rank: number;
@@ -27,7 +27,7 @@ export function useLeaderboard(userId?: string): LeaderboardData {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = useCallback(async () => {
     if (!userId) {
       setLoading(false);
       return;
@@ -50,7 +50,7 @@ export function useLeaderboard(userId?: string): LeaderboardData {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
     fetchLeaderboard();
