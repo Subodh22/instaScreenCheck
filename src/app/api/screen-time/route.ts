@@ -5,7 +5,7 @@ import { serverStorage } from '../../../lib/serverStorage';
 
 // Helper function to validate Firebase UID
 function isValidFirebaseUID(uid: string): boolean {
-  return uid && uid.length > 0 && uid !== 'anonymous';
+  return Boolean(uid && uid.length > 0 && uid !== 'anonymous');
 }
 
 // Helper function to check if Supabase is properly configured
