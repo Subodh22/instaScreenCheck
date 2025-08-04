@@ -5,15 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
-import { Bell, Clock, Settings, Save, Loader2 } from 'lucide-react';
+import { Bell, Clock, Settings, Save, Loader2, Smartphone, TestTube } from 'lucide-react';
 import { useAuth } from '../lib/hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { pushNotificationService } from '../lib/pushNotifications';
 
 interface NotificationPreferences {
   daily_reminders: boolean;
   weekly_summary: boolean;
   competition_updates: boolean;
   reminder_time: string;
+  push_notifications: boolean;
 }
 
 export function NotificationSettings() {
@@ -22,18 +24,31 @@ export function NotificationSettings() {
     daily_reminders: true,
     weekly_summary: true,
     competition_updates: true,
-    reminder_time: '22:00' // 10 PM default
+    reminder_time: '22:00', // 10 PM default
+    push_notifications: false
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string>('');
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
 
-  // Load user preferences
+  // Load user preferences and check push support
   useEffect(() => {
     if (user?.uid) {
       loadPreferences();
+      checkPushSupport();
     }
   }, [user?.uid]);
+
+  const checkPushSupport = () => {
+    const supported = pushNotificationService.isSupported();
+    setPushSupported(supported);
+    
+    if ('Notification' in window) {
+      setPushPermission(Notification.permission);
+    }
+  };
 
   const loadPreferences = async () => {
     setLoading(true);
@@ -92,6 +107,70 @@ export function NotificationSettings() {
       ...prev,
       [key]: value
     }));
+  };
+
+  const handlePushNotificationToggle = async (enabled: boolean) => {
+    if (!enabled) {
+      // Disable push notifications
+      await pushNotificationService.unsubscribeFromPushNotifications();
+      updatePreference('push_notifications', false);
+      setMessage('Push notifications disabled');
+      return;
+    }
+
+    // Enable push notifications
+    try {
+      const subscription = await pushNotificationService.subscribeToPushNotifications();
+      if (subscription) {
+        updatePreference('push_notifications', true);
+        setPushPermission('granted');
+        setMessage('Push notifications enabled successfully!');
+        
+        // Save subscription to database
+        await savePushSubscription(subscription);
+      } else {
+        setMessage('Failed to enable push notifications');
+      }
+    } catch (error) {
+      console.error('Error enabling push notifications:', error);
+      setMessage('Error enabling push notifications');
+    }
+  };
+
+  const handleTestPushNotification = async () => {
+    try {
+      const success = await pushNotificationService.sendTestNotification();
+      if (success) {
+        setMessage('Test notification sent! Check your device.');
+      } else {
+        setMessage('Failed to send test notification');
+      }
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      setMessage('Error sending test notification');
+    }
+  };
+
+  const savePushSubscription = async (subscription: PushSubscription) => {
+    if (!user?.uid) return;
+
+    try {
+      const subscriptionInfo = pushNotificationService.getSubscriptionInfo();
+      if (!subscriptionInfo) return;
+
+      const { error } = await supabase
+        .from('users')
+        .update({
+          push_subscription: subscriptionInfo
+        })
+        .eq('firebase_uid', user.uid);
+
+      if (error) {
+        console.error('Error saving push subscription:', error);
+      }
+    } catch (error) {
+      console.error('Error saving push subscription:', error);
+    }
   };
 
   if (!user) {
@@ -183,6 +262,50 @@ export function NotificationSettings() {
                 checked={preferences.competition_updates}
                 onCheckedChange={(checked) => updatePreference('competition_updates', checked)}
               />
+            </div>
+
+            {/* Push Notifications */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Smartphone className="h-4 w-4" />
+                    Push Notifications
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Receive notifications even when the app is closed
+                  </p>
+                </div>
+                <Switch
+                  checked={preferences.push_notifications && pushSupported && pushPermission === 'granted'}
+                  onCheckedChange={handlePushNotificationToggle}
+                  disabled={!pushSupported}
+                />
+              </div>
+              
+              {!pushSupported && (
+                <p className="text-xs text-orange-600 mt-1">
+                  Push notifications not supported in this browser
+                </p>
+              )}
+              
+              {pushSupported && pushPermission === 'denied' && (
+                <p className="text-xs text-red-600 mt-1">
+                  Notification permission denied. Please enable in browser settings.
+                </p>
+              )}
+              
+              {pushSupported && pushPermission === 'granted' && preferences.push_notifications && (
+                <Button
+                  onClick={handleTestPushNotification}
+                  size="sm"
+                  variant="outline"
+                  className="mt-2"
+                >
+                  <TestTube className="h-3 w-3 mr-1" />
+                  Test Push Notification
+                </Button>
+              )}
             </div>
 
             {/* Save Button */}
