@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import { analyzeScreenTimeWithAI, createManualScreenTimeData, ExtractedScreenTimeData } from '../lib/aiOcrUtils';
 import { useAuth } from '../lib/hooks/useAuth';
+import { useTodayUpload } from '../lib/hooks/useTodayUpload';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 
 interface ScreenTimeUploadProps {
@@ -18,6 +19,7 @@ interface ScreenTimeUploadProps {
 
 export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
   const { user, signInWithGoogle, signOut } = useAuth();
+  const { data: todayUploadData, loading: todayLoading, refetch: refetchToday } = useTodayUpload();
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -67,6 +69,11 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
       if (!uploadedImage) {
         throw new Error('Please upload a screenshot first');
       }
+
+      // Check if user has already uploaded today
+      if (todayUploadData?.hasUploadedToday) {
+        throw new Error('You have already uploaded a screenshot today. Only one upload per day is allowed.');
+      }
       
       // Process uploaded image with AI
       const processedData = await analyzeScreenTimeWithAI(uploadedImage);
@@ -80,6 +87,9 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
       
       // Automatically upload to database
       await saveToSupabase(processedData);
+      
+      // Refresh today's upload status
+      refetchToday();
       
     } catch (error) {
       console.error('Error processing image:', error);
@@ -177,8 +187,15 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
             <Camera className="h-4 w-4 text-purple-600" />
             <h3 className="font-semibold">Upload Screen Time Screenshot</h3>
           </div>
-          <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
-            Today only
+          <div className="flex items-center gap-2">
+            {todayUploadData?.hasUploadedToday && (
+              <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                ✓ Uploaded today
+              </div>
+            )}
+            <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
+              Today only
+            </div>
           </div>
           <Dialog>
             <DialogTrigger asChild>
@@ -238,77 +255,95 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
 
         {/* Upload Section */}
         <div className="space-y-4">
-          <div className="flex gap-3">
-            <Button
-              onClick={openCamera}
-              disabled={isUploading}
-              className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
-            >
-              {isUploading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Camera className="h-4 w-4 mr-2" />
-              )}
-              {isUploading ? 'Uploading...' : 'Choose Screenshot'}
-            </Button>
-            
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/jpg,image/webp"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-          </div>
-
-          {/* Image Preview */}
-          {uploadedImage && (
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Uploaded Screenshot:</Label>
-              <div className="relative">
-                <Image 
-                  src={uploadedImage} 
-                  alt="Screen Time Screenshot" 
-                  width={400}
-                  height={192}
-                  className="w-full max-h-48 object-contain rounded-lg border border-gray-200"
-                />
-                <button
-                  onClick={() => setUploadedImage(null)}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Process Button */}
-          <Button
-            onClick={processImage}
-            disabled={!uploadedImage}
-            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-          >
-            {isProcessing ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Upload className="h-4 w-4 mr-2" />
-            )}
-            {isProcessing ? 'Uploading...' : 'Upload'}
-          </Button>
-
-          {/* Error Message Display */}
-          {errorMessage && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-start gap-2">
-                <div className="text-red-600 mt-0.5">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          {todayUploadData?.hasUploadedToday ? (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="text-green-600">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <p className="text-sm text-red-800">{errorMessage}</p>
+                <h4 className="font-medium text-green-800">Already Uploaded Today</h4>
               </div>
+              <p className="text-sm text-green-700">
+                You have already uploaded your screen time screenshot for today. Come back tomorrow to upload again!
+              </p>
             </div>
+          ) : (
+            <>
+              <div className="flex gap-3">
+                <Button
+                  onClick={openCamera}
+                  disabled={isUploading || todayLoading}
+                  className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
+                >
+                  {isUploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Camera className="h-4 w-4 mr-2" />
+                  )}
+                  {isUploading ? 'Uploading...' : 'Choose Screenshot'}
+                </Button>
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </div>
+
+              {/* Image Preview */}
+              {uploadedImage && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Uploaded Screenshot:</Label>
+                  <div className="relative">
+                    <Image 
+                      src={uploadedImage} 
+                      alt="Screen Time Screenshot" 
+                      width={400}
+                      height={192}
+                      className="w-full max-h-48 object-contain rounded-lg border border-gray-200"
+                    />
+                    <button
+                      onClick={() => setUploadedImage(null)}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Process Button */}
+              <Button
+                onClick={processImage}
+                disabled={!uploadedImage}
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+              >
+                {isProcessing ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                {isProcessing ? 'Uploading...' : 'Upload'}
+              </Button>
+
+              {/* Error Message Display */}
+              {errorMessage && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <div className="text-red-600 mt-0.5">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-red-800">{errorMessage}</p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
