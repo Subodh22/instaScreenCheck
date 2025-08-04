@@ -42,6 +42,21 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
     reader.readAsDataURL(file);
   };
 
+  const isTodayScreenshot = (dateString: string): boolean => {
+    const today = new Date();
+    const todayFormatted = today.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    // Check if the date contains "Today" or matches today's formatted date
+    return dateString.toLowerCase().includes('today') || 
+           dateString.includes(todayFormatted) ||
+           (dateString.includes(today.getDate().toString()) && 
+            dateString.includes(today.toLocaleDateString('en-US', { month: 'long' })));
+  };
+
   const processImage = async () => {
     setIsProcessing(true);
     
@@ -52,6 +67,12 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
       
       // Process uploaded image with AI
       const processedData = await analyzeScreenTimeWithAI(uploadedImage);
+      
+      // Check if the screenshot is from today
+      if (!isTodayScreenshot(processedData.date)) {
+        throw new Error(`This screenshot is from ${processedData.date}, not today. Please upload a screenshot from today's Screen Time.`);
+      }
+      
       setAiResponse('Successfully uploaded!');
       
       // Automatically upload to database
@@ -153,6 +174,9 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
             <Camera className="h-4 w-4 text-purple-600" />
             <h3 className="font-semibold">Upload Screen Time Screenshot</h3>
           </div>
+          <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
+            Today only
+          </div>
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="ghost" size="sm" className="p-1 h-auto">
@@ -198,7 +222,8 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
                       Upload your iPhone Screen Time screenshot
                     </p>
                     <p className="text-xs text-gray-600 leading-relaxed">
-                      Make sure it shows the total time and app breakdown like this example
+                      Make sure it shows the total time and app breakdown like this example. 
+                      <strong>Only today's screenshots are accepted.</strong>
                     </p>
                   </div>
                 </div>
