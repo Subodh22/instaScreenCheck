@@ -103,10 +103,10 @@ export function FriendsDailyActivity({ data, totalFriends, onRefresh, loading }:
             }`}
           >
             <div className="flex items-center gap-3">
-              <Avatar className={`w-10 h-10 ${getAvatarColor(entry.user.display_name, entry.user.email)}`}>
+              <Avatar className={`w-10 h-10 ${getAvatarColor(entry.user.display_name || undefined, entry.user.email)}`}>
                 <AvatarImage src={entry.user.avatar_url || undefined} />
                 <AvatarFallback className="text-white text-sm font-medium">
-                  {getInitials(entry.user.display_name, entry.user.email)}
+                  {getInitials(entry.user.display_name || undefined, entry.user.email)}
                 </AvatarFallback>
               </Avatar>
               

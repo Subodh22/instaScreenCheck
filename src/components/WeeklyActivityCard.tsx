@@ -136,7 +136,7 @@ export function WeeklyActivityCard({ data, weekRange, onRefresh, loading }: Week
                 <Avatar className="w-10 h-10">
                   <AvatarImage src={entry.user.avatar_url || undefined} />
                   <AvatarFallback className="text-sm">
-                    {getInitials(entry.user.display_name, entry.user.email)}
+                    {getInitials(entry.user.display_name || undefined, entry.user.email)}
                   </AvatarFallback>
                 </Avatar>
               </div>
