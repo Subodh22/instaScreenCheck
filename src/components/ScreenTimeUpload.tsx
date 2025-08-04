@@ -221,14 +221,13 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
               ) : (
                 <Camera className="h-4 w-4 mr-2" />
               )}
-              {isUploading ? 'Uploading...' : 'Upload Screenshot'}
+              {isUploading ? 'Uploading...' : 'Choose Screenshot'}
             </Button>
             
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
-              capture="environment"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
               onChange={handleFileUpload}
               className="hidden"
             />
