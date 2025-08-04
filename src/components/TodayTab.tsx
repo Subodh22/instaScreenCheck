@@ -357,23 +357,7 @@ export function TodayTab() {
         </CardContent>
       </Card>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="border-0 shadow-lg bg-gradient-to-r from-green-100 to-green-200">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl mb-1">🏆</div>
-            <p className="text-sm text-green-700 font-medium">Your Rank</p>
-            <p className="text-xl font-bold text-green-800">#2</p>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-lg bg-gradient-to-r from-orange-100 to-orange-200">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl mb-1">🔥</div>
-            <p className="text-sm text-orange-700 font-medium">Streak</p>
-            <p className="text-xl font-bold text-orange-800">3 days</p>
-          </CardContent>
-        </Card>
-      </div>
+
     </div>
   );
 } 
