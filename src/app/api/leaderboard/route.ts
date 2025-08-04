@@ -40,7 +40,7 @@ function formatMinutesToTime(totalMinutes: number): string {
   return `${minutes}m`;
 }
 
-// GET - Get leaderboard data for friends
+// GET - Get leaderboard data for all users
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -54,35 +54,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 });
     }
 
-    // Get user's friends
-    const { data: friendships, error: friendshipsError } = await supabaseAdmin
-      .from('friendships')
-      .select('*')
-      .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
-
-    if (friendshipsError) {
-      console.error('Error fetching friendships:', friendshipsError);
-      return NextResponse.json({ error: 'Failed to fetch friendships' }, { status: 500 });
-    }
-
-    // Get friend user IDs
-    const friendIds = friendships?.map(friendship => 
-      friendship.user1_id === userId ? friendship.user2_id : friendship.user1_id
-    ) || [];
-
-    // Add current user to the list
-    const allUserIds = [userId, ...friendIds];
-
-    // Get friend user details
+    // Get all users from the database
     const { data: users, error: usersError } = await supabaseAdmin
       .from('users')
-      .select('firebase_uid, email, display_name, avatar_url')
-      .in('firebase_uid', allUserIds);
+      .select('firebase_uid, email, display_name, avatar_url');
 
     if (usersError) {
       console.error('Error fetching users:', usersError);
       return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
     }
+
+    // Get all user IDs
+    const allUserIds = users?.map(user => user.firebase_uid) || [];
 
     // Get this month's screen time data for all users
     const { start: monthStart, end: monthEnd } = getMonthRange();

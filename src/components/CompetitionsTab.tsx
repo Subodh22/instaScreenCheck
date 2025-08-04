@@ -70,7 +70,7 @@ export function CompetitionsTab() {
       <div className="text-center space-y-2 pt-2">
         <div className="text-4xl">🏆</div>
         <h1 className="text-xl font-semibold">Monthly Leaderboard</h1>
-        <p className="text-sm text-muted-foreground">Compete with your friends for the lowest monthly screen time</p>
+        <p className="text-sm text-muted-foreground">Compete with all users for the lowest monthly screen time</p>
       </div>
 
       {/* Leaderboard */}
@@ -109,8 +109,8 @@ export function CompetitionsTab() {
           ) : leaderboard.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <div className="text-2xl mb-2">👥</div>
-              <p className="text-sm">No friends to compete with yet</p>
-              <p className="text-xs">Add friends to see the leaderboard</p>
+              <p className="text-sm">No users to compete with yet</p>
+              <p className="text-xs">Be the first to upload your screen time!</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -164,8 +164,8 @@ export function CompetitionsTab() {
               <h3 className="text-lg font-semibold">Monthly Challenge</h3>
               <p className="text-sm opacity-90">
                 {leaderboard.length > 1 
-                  ? `${leaderboard.length} friends competing for the lowest monthly screen time!`
-                  : 'Add more friends to start competing!'
+                  ? `${leaderboard.length} users competing for the lowest monthly screen time!`
+                  : 'Be the first to upload your screen time!'
                 }
               </p>
               
