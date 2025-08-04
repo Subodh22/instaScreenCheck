@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../lib/hooks/useAuth';
 import { useFriends, User, FriendRequest } from '../lib/hooks/useFriends';
+import { useWeeklyActivity } from '../lib/hooks/useWeeklyActivity';
+import { WeeklyActivityCard } from './WeeklyActivityCard';
 
 export function FriendsTab() {
   const { user } = useAuth();
@@ -35,6 +37,13 @@ export function FriendsTab() {
     searchUsers,
     createUserProfile
   } = useFriends(user?.uid);
+
+  const {
+    data: weeklyActivityData,
+    loading: weeklyLoading,
+    error: weeklyError,
+    refetch: refetchWeekly
+  } = useWeeklyActivity(user?.uid);
 
   const [searchEmail, setSearchEmail] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
@@ -140,6 +149,27 @@ export function FriendsTab() {
         <h1 className="text-xl font-semibold">Friends</h1>
         <p className="text-sm text-muted-foreground">Connect with friends and track together</p>
       </div>
+
+      {/* Weekly Activity Challenge */}
+      {weeklyLoading && !weeklyActivityData ? (
+        <Card className="border-0 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <span className="text-sm text-gray-500">Loading weekly activity...</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : weeklyActivityData ? (
+        <WeeklyActivityCard 
+          data={weeklyActivityData.weeklyActivity}
+          weekRange={weeklyActivityData.weekRange}
+          onRefresh={refetchWeekly}
+          loading={weeklyLoading}
+        />
+      ) : null}
 
       {/* Add Friends Section */}
       <Card className="border-0 shadow-lg">

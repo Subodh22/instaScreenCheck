@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '../../../lib/supabaseAdmin';
+import { supabaseAdmin } from '../../../../lib/supabaseAdmin';
 
 // Helper function to check if Supabase is properly configured
 function isSupabaseConfigured(): boolean {
@@ -17,18 +17,6 @@ function parseTimeToMinutes(timeString: string): number {
   return hours * 60 + minutes;
 }
 
-// Helper function to get the start and end of the current month
-function getMonthRange(): { start: Date; end: Date } {
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  startOfMonth.setHours(0, 0, 0, 0);
-  
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  endOfMonth.setHours(23, 59, 59, 999);
-  
-  return { start: startOfMonth, end: endOfMonth };
-}
-
 // Helper function to format minutes back to readable time
 function formatMinutesToTime(totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60);
@@ -40,7 +28,23 @@ function formatMinutesToTime(totalMinutes: number): string {
   return `${minutes}m`;
 }
 
-// GET - Get leaderboard data for friends
+// Helper function to get the start and end of the current week (Monday to Sunday)
+function getWeekRange(): { start: Date; end: Date } {
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+  startOfWeek.setDate(diff);
+  startOfWeek.setHours(0, 0, 0, 0);
+  
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+  
+  return { start: startOfWeek, end: endOfWeek };
+}
+
+// GET - Get friends' weekly screen time activity
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -73,7 +77,7 @@ export async function GET(request: NextRequest) {
     // Add current user to the list
     const allUserIds = [userId, ...friendIds];
 
-    // Get friend user details
+    // Get user details
     const { data: users, error: usersError } = await supabaseAdmin
       .from('users')
       .select('firebase_uid, email, display_name, avatar_url')
@@ -84,29 +88,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
     }
 
-    // Get this month's screen time data for all users
-    const { start: monthStart, end: monthEnd } = getMonthRange();
+    // Get this week's screen time data for all users
+    const { start: weekStart, end: weekEnd } = getWeekRange();
     
     const { data: screenTimeData, error: screenTimeError } = await supabaseAdmin
       .from('screen_time_entries')
       .select('*')
       .in('user_id', allUserIds)
-      .gte('created_at', monthStart.toISOString())
-      .lte('created_at', monthEnd.toISOString());
+      .gte('created_at', weekStart.toISOString())
+      .lte('created_at', weekEnd.toISOString());
 
     if (screenTimeError) {
       console.error('Error fetching screen time data:', screenTimeError);
       return NextResponse.json({ error: 'Failed to fetch screen time data' }, { status: 500 });
     }
 
-    // Calculate monthly totals for each user
-    const leaderboardData = users?.map(user => {
+    // Calculate weekly totals for each user
+    const weeklyActivity = users?.map(user => {
       const userEntries = screenTimeData?.filter(entry => entry.user_id === user.firebase_uid) || [];
       
-      // Calculate total minutes for the month
+      // Calculate total minutes for the week
       const totalMinutes = userEntries.reduce((total, entry) => {
         return total + parseTimeToMinutes(entry.total_time);
       }, 0);
+
+      // Count days with data
+      const daysWithData = userEntries.length;
+
+      // Get the most recent entry for additional context
+      const mostRecentEntry = userEntries.length > 0 
+        ? userEntries.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+        : null;
 
       return {
         user: {
@@ -115,26 +127,35 @@ export async function GET(request: NextRequest) {
           display_name: user.display_name,
           avatar_url: user.avatar_url
         },
-        screenTime: formatMinutesToTime(totalMinutes),
-        totalMinutes: totalMinutes,
-        apps: [], // No apps for weekly view
-        categories: [], // No categories for weekly view
+        weeklyStats: {
+          totalTime: formatMinutesToTime(totalMinutes),
+          totalMinutes: totalMinutes,
+          daysWithData: daysWithData,
+          averagePerDay: daysWithData > 0 ? formatMinutesToTime(Math.round(totalMinutes / daysWithData)) : '0m',
+          lastUpdated: mostRecentEntry?.created_at || null
+        },
         isCurrentUser: user.firebase_uid === userId
       };
     }) || [];
 
-    // Sort by total minutes (ascending - lowest first)
-    leaderboardData.sort((a, b) => a.totalMinutes - b.totalMinutes);
+    // Sort by total minutes (ascending - lowest first for screen time challenge)
+    weeklyActivity.sort((a, b) => a.weeklyStats.totalMinutes - b.weeklyStats.totalMinutes);
 
     // Add rank to each entry
-    const leaderboardWithRanks = leaderboardData.map((entry, index) => ({
+    const activityWithRanks = weeklyActivity.map((entry, index) => ({
       ...entry,
       rank: index + 1
     }));
 
     return NextResponse.json({
       success: true,
-      data: leaderboardWithRanks
+      data: {
+        weeklyActivity: activityWithRanks,
+        weekRange: {
+          start: weekStart.toISOString(),
+          end: weekEnd.toISOString()
+        }
+      }
     });
 
   } catch (error) {

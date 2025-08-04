@@ -5,11 +5,12 @@ import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Upload, Camera, Database, Loader2 } from 'lucide-react';
+import { Upload, Camera, Database, Loader2, HelpCircle } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import { analyzeScreenTimeWithAI, createManualScreenTimeData, ExtractedScreenTimeData } from '../lib/aiOcrUtils';
 import { useAuth } from '../lib/hooks/useAuth';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 
 interface ScreenTimeUploadProps {
   onUploadSuccess?: () => void;
@@ -22,11 +23,7 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<ExtractedScreenTimeData | null>(null);
   const [aiResponse, setAiResponse] = useState<string>('');
-  const [manualData, setManualData] = useState({
-    totalTime: '',
-    date: new Date().toISOString().split('T')[0],
-    updatedAt: new Date().toISOString().split('T')[0]
-  });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,51 +46,28 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
     setIsProcessing(true);
     
     try {
-      let processedData: ExtractedScreenTimeData;
-      
-      if (uploadedImage) {
-        // Try AI-powered analysis for uploaded image
-        // Processing uploaded image with AI...
-        try {
-          processedData = await analyzeScreenTimeWithAI(uploadedImage);
-          setAiResponse('AI analysis completed successfully!');
-        } catch (aiError) {
-          console.error('AI analysis failed, falling back to manual data:', aiError);
-          setAiResponse(`AI analysis failed: ${aiError instanceof Error ? aiError.message : 'Unknown error'}`);
-          // If AI fails, use manual data if available
-          if (manualData.totalTime) {
-            processedData = createManualScreenTimeData(
-              manualData.totalTime,
-              manualData.date,
-              manualData.updatedAt
-            );
-          } else {
-            throw new Error('AI analysis failed and no manual data available. Please enter the total screen time manually.');
-          }
-        }
-      } else if (manualData.totalTime) {
-        // Use manual data as fallback
-        // Using manual data entry...
-        processedData = createManualScreenTimeData(
-          manualData.totalTime,
-          manualData.date,
-          manualData.updatedAt
-        );
-      } else {
-        throw new Error('No image uploaded or manual data entered');
+      if (!uploadedImage) {
+        throw new Error('Please upload a screenshot first');
       }
       
-      setExtractedData(processedData);
+      // Process uploaded image with AI
+      const processedData = await analyzeScreenTimeWithAI(uploadedImage);
+      setAiResponse('Successfully uploaded!');
+      
+      // Automatically upload to database
+      await saveToSupabase(processedData);
+      
     } catch (error) {
       console.error('Error processing image:', error);
-      alert(error instanceof Error ? error.message : 'Error processing image. Please try again or use manual input.');
+      alert(error instanceof Error ? error.message : 'Error processing image. Please try again.');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const saveToSupabase = async () => {
-    if (!extractedData) return;
+  const saveToSupabase = async (data?: ExtractedScreenTimeData) => {
+    const dataToSave = data || extractedData;
+    if (!dataToSave) return;
     
     try {
       const response = await fetch('/api/screen-time', {
@@ -102,11 +76,11 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          date: extractedData.date,
-          total_time: extractedData.totalTime,
-          apps: extractedData.apps,
-          categories: extractedData.categories,
-          updated_at: extractedData.updatedAt,
+          date: dataToSave.date,
+          total_time: dataToSave.totalTime,
+          apps: dataToSave.apps,
+          categories: dataToSave.categories,
+          updated_at: dataToSave.updatedAt,
           user_id: user?.uid || 'anonymous' // Use authenticated user ID
         }),
       });
@@ -117,13 +91,7 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
         throw new Error(result.error || 'Failed to save data');
       }
       
-      const message = result.source === 'serverStorage' 
-        ? `Screen time data saved to server memory! ${result.message}`
-        : result.source === 'supabase'
-        ? 'Screen time data saved to database successfully!'
-        : 'Screen time data saved successfully!';
-      
-      alert(message);
+      // Success message is handled by setAiResponse above
       
       // Call the success callback if provided
       if (onUploadSuccess) {
@@ -133,11 +101,6 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
       // Reset form
       setUploadedImage(null);
       setExtractedData(null);
-      setManualData({
-        totalTime: '',
-        date: new Date().toISOString().split('T')[0],
-        updatedAt: new Date().toISOString().split('T')[0]
-      });
       
     } catch (error) {
       console.error('Error saving to Supabase:', error);
@@ -190,19 +153,59 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
             <Camera className="h-4 w-4 text-purple-600" />
             <h3 className="font-semibold">Upload Screen Time Screenshot</h3>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="text-xs text-muted-foreground">
-              Signed in as: {user.email}
-            </div>
-            <Button
-              onClick={signOut}
-              variant="outline"
-              size="sm"
-              className="text-xs"
-            >
-              Sign Out
-            </Button>
-          </div>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="p-1 h-auto">
+                <HelpCircle className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-sm mx-auto bg-white rounded-2xl shadow-2xl border-0 p-6">
+              <DialogHeader className="text-center mb-4">
+                <DialogTitle className="text-lg font-bold text-gray-800">📱 Screenshot Guide</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="relative">
+                    <Image
+                      src="/iphone-screen-time-example.png"
+                      alt="iPhone Screen Time Screenshot Example"
+                      width={180}
+                      height={360}
+                      className="rounded-xl border-2 border-gray-200 shadow-lg object-cover"
+                      onError={(e) => {
+                        // Hide the image and show fallback text if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const fallback = target.nextElementSibling as HTMLElement;
+                        if (fallback) fallback.style.display = 'block';
+                      }}
+                    />
+                    <div className="hidden bg-gradient-to-b from-gray-50 to-gray-100 p-4 rounded-xl border-2 border-gray-200 shadow-lg" style={{width: '180px', height: '360px'}}>
+                      <div className="text-center space-y-2 h-full flex flex-col justify-center">
+                        <div className="text-xs text-gray-500">📱 iPhone Screen Time Example</div>
+                        <div className="bg-white p-2 rounded-lg border shadow-sm">
+                          <div className="text-center space-y-1">
+                            <div className="text-sm font-bold">SCREEN TIME</div>
+                            <div className="text-xs text-gray-600">Today, 2 August</div>
+                            <div className="text-lg font-bold text-blue-600">5h 35m</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-center space-y-2">
+                    <p className="text-sm font-semibold text-gray-800">
+                      Upload your iPhone Screen Time screenshot
+                    </p>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Make sure it shows the total time and app breakdown like this example
+                    </p>
+                  </div>
+                </div>
+
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Upload Section */}
@@ -218,7 +221,7 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
               ) : (
                 <Camera className="h-4 w-4 mr-2" />
               )}
-              {isUploading ? 'Uploading...' : 'Take Screenshot'}
+              {isUploading ? 'Uploading...' : 'Upload Screenshot'}
             </Button>
             
             <input
@@ -253,33 +256,10 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
             </div>
           )}
 
-          {/* Manual Input Fallback */}
-          <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-            <Label htmlFor="totalTime" className="text-sm font-medium">
-              Total Screen Time (e.g., 5h 14m)
-            </Label>
-            <Input
-              id="totalTime"
-              value={manualData.totalTime}
-              onChange={(e) => setManualData(prev => ({ ...prev, totalTime: e.target.value }))}
-              placeholder="5h 14m"
-            />
-            
-            <Label htmlFor="date" className="text-sm font-medium">
-              Date
-            </Label>
-            <Input
-              id="date"
-              type="date"
-              value={manualData.date}
-              onChange={(e) => setManualData(prev => ({ ...prev, date: e.target.value }))}
-            />
-          </div>
-
           {/* Process Button */}
           <Button
             onClick={processImage}
-            disabled={!uploadedImage && !manualData.totalTime}
+            disabled={!uploadedImage}
             className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
           >
             {isProcessing ? (
@@ -287,7 +267,7 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
             ) : (
               <Upload className="h-4 w-4 mr-2" />
             )}
-            {isProcessing ? 'Processing with AI...' : 'Process & Extract Data'}
+            {isProcessing ? 'Uploading...' : 'Upload'}
           </Button>
         </div>
 
@@ -296,7 +276,7 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
           <div className="mt-6 space-y-4">
             <div className="flex items-center gap-2">
               <Database className="h-4 w-4 text-blue-600" />
-              <h4 className="font-medium text-blue-700">AI Analysis Status</h4>
+              <h4 className="font-medium text-blue-700">Upload Status</h4>
             </div>
             <div className="p-3 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-800">{aiResponse}</p>
@@ -304,63 +284,7 @@ export function ScreenTimeUpload({ onUploadSuccess }: ScreenTimeUploadProps) {
           </div>
         )}
 
-        {/* Extracted Data Display */}
-        {extractedData && (
-          <div className="mt-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <Database className="h-4 w-4 text-green-600" />
-              <h4 className="font-medium text-green-700">Extracted Data</h4>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                <span className="text-sm font-medium">Total Time:</span>
-                <span className="font-bold text-green-700">{extractedData.totalTime}</span>
-              </div>
-              
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                <span className="text-sm font-medium">Date:</span>
-                <span className="font-medium">{extractedData.date}</span>
-              </div>
-              
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                <span className="text-sm font-medium">Updated At:</span>
-                <span className="font-medium">{extractedData.updatedAt}</span>
-              </div>
 
-              {/* Apps */}
-              <div className="space-y-2">
-                <h5 className="text-sm font-medium">Most Used Apps:</h5>
-                {extractedData.apps.map((app, index) => (
-                  <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                    <span className="text-sm">{app.name}</span>
-                    <span className="text-sm font-medium">{app.time}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Categories */}
-              <div className="space-y-2">
-                <h5 className="text-sm font-medium">Categories:</h5>
-                {extractedData.categories.map((category, index) => (
-                  <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                    <span className="text-sm">{category.name}</span>
-                    <span className="text-sm font-medium">{category.time}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Save Button */}
-            <Button
-              onClick={saveToSupabase}
-              className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
-            >
-              <Database className="h-4 w-4 mr-2" />
-              Save to Database
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

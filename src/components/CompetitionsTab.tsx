@@ -3,7 +3,6 @@
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { 
   Trophy, 
   Medal, 
@@ -23,15 +22,7 @@ export function CompetitionsTab() {
   const { user } = useAuth();
   const { leaderboard, loading, error, refetch } = useLeaderboard(user?.uid);
 
-  const getInitials = (name?: string, email?: string) => {
-    if (name) {
-      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    }
-    if (email) {
-      return email[0].toUpperCase();
-    }
-    return '?';
-  };
+
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -59,10 +50,7 @@ export function CompetitionsTab() {
     }
   };
 
-  const getTopApps = (apps: any[]) => {
-    if (!apps || apps.length === 0) return [];
-    return apps.slice(0, 3); // Show top 3 apps
-  };
+
 
   if (!user) {
     return (
@@ -81,8 +69,8 @@ export function CompetitionsTab() {
       {/* Header */}
       <div className="text-center space-y-2 pt-2">
         <div className="text-4xl">🏆</div>
-        <h1 className="text-xl font-semibold">Today&apos;s Leaderboard</h1>
-        <p className="text-sm text-muted-foreground">Compete with your friends for the lowest screen time</p>
+        <h1 className="text-xl font-semibold">Monthly Leaderboard</h1>
+        <p className="text-sm text-muted-foreground">Compete with your friends for the lowest monthly screen time</p>
       </div>
 
       {/* Leaderboard */}
@@ -90,7 +78,7 @@ export function CompetitionsTab() {
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-4">
             <Trophy className="h-4 w-4 text-purple-600" />
-            <h3 className="font-semibold">Screen Time Challenge</h3>
+            <h3 className="font-semibold">Monthly Screen Time Challenge</h3>
             <Badge variant="secondary" className="text-xs">
               <Users className="h-3 w-3 mr-1" />
               {leaderboard.length} Participants
@@ -129,21 +117,15 @@ export function CompetitionsTab() {
               {leaderboard.map((entry) => (
                 <div 
                   key={entry.user.firebase_uid} 
-                  className={`flex items-center justify-between p-4 rounded-xl ${getRankColor(entry.rank)} ${
+                  className={`flex items-center justify-between p-3 rounded-lg ${getRankColor(entry.rank)} ${
                     entry.isCurrentUser ? 'ring-2 ring-purple-400' : ''
                   }`}
                 >
                   {/* Rank and User Info */}
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-8 h-8">
+                    <div className="flex items-center justify-center w-6 h-6">
                       {getRankIcon(entry.rank)}
                     </div>
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={entry.user.avatar_url} />
-                      <AvatarFallback className="text-xs">
-                        {getInitials(entry.user.display_name, entry.user.email)}
-                      </AvatarFallback>
-                    </Avatar>
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-semibold text-sm">
@@ -161,24 +143,10 @@ export function CompetitionsTab() {
                     </div>
                   </div>
 
-                  {/* Screen Time and Apps */}
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span className="font-bold text-sm">{entry.screenTime}</span>
-                      </div>
-                      {entry.apps.length > 0 && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <span className="text-xs opacity-75">Top:</span>
-                          {getTopApps(entry.apps).map((app, index) => (
-                            <span key={index} className="text-xs bg-black bg-opacity-10 px-1 rounded">
-                              {app.name}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                  {/* Screen Time Only */}
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span className="font-bold text-sm">{entry.screenTime}</span>
                   </div>
                 </div>
               ))}
@@ -193,10 +161,10 @@ export function CompetitionsTab() {
           <CardContent className="p-6">
             <div className="text-center space-y-2">
               <div className="text-3xl">🎯</div>
-              <h3 className="text-lg font-semibold">Today&apos;s Challenge</h3>
+              <h3 className="text-lg font-semibold">Monthly Challenge</h3>
               <p className="text-sm opacity-90">
                 {leaderboard.length > 1 
-                  ? `${leaderboard.length} friends competing for the lowest screen time!`
+                  ? `${leaderboard.length} friends competing for the lowest monthly screen time!`
                   : 'Add more friends to start competing!'
                 }
               </p>

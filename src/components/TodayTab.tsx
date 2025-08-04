@@ -9,46 +9,10 @@ import { useScreenTimeStore } from '../lib/store/screenTimeStore';
 import { ScreenTimeUpload } from './ScreenTimeUpload';
 import { useScreenTimeData, parseTimeToMinutes, formatMinutesToTime, getTodayDateString } from '../lib/hooks/useScreenTimeData';
 import { useAuth } from '../lib/hooks/useAuth';
+import { useDailyActivity } from '../lib/hooks/useDailyActivity';
+import { FriendsDailyActivity } from './FriendsDailyActivity';
 
-// Mock data for friends (keeping this for now)
-const friendsData = [
-  { 
-    id: 1, 
-    name: 'Sarah', 
-    avatar: '🧚‍♀️', 
-    screenTime: 2.5, 
-    status: 'champion', 
-    streak: 7,
-    color: 'bg-gradient-to-r from-green-400 to-green-500'
-  },
-  { 
-    id: 2, 
-    name: 'Alex', 
-    avatar: '🎯', 
-    screenTime: 3.8, 
-    status: 'good', 
-    streak: 3,
-    color: 'bg-gradient-to-r from-blue-400 to-blue-500'
-  },
-  { 
-    id: 3, 
-    name: 'Jamie', 
-    avatar: '🚀', 
-    screenTime: 5.2, 
-    status: 'struggling', 
-    streak: 0,
-    color: 'bg-gradient-to-r from-orange-400 to-orange-500'
-  },
-  { 
-    id: 4, 
-    name: 'Mike', 
-    avatar: '🎮', 
-    screenTime: 7.8, 
-    status: 'danger', 
-    streak: 0,
-    color: 'bg-gradient-to-r from-red-400 to-red-500'
-  },
-];
+// Mock data for friends (removed - now using real data from API)
 
 const formatTime = (hours: number) => {
   const h = Math.floor(hours);
@@ -181,6 +145,14 @@ export function TodayTab() {
     user?.uid, 
     getTodayDateString()
   );
+
+  // Fetch friends daily activity
+  const {
+    data: dailyActivityData,
+    loading: dailyLoading,
+    error: dailyError,
+    refetch: refetchDaily
+  } = useDailyActivity(user?.uid);
   
   const todayStats = getTodayStats();
   const currentScreenTime = todayStats.totalTime / (1000 * 60 * 60); // Convert to hours
@@ -315,47 +287,26 @@ export function TodayTab() {
         </CardContent>
       </Card>
 
-      {/* Friends Activity */}
-      <Card className="border-0 shadow-lg">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-blue-600" />
-              <h3 className="font-semibold">Friends Update</h3>
-            </div>
-            <span className="text-xs text-muted-foreground">{friendsData.length} friends</span>
-          </div>
-          <div className="space-y-3">
-            {friendsData.map((friend) => (
-              <div key={friend.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-                <div className={`${friend.color} w-10 h-10 rounded-full flex items-center justify-center text-white text-lg`}>
-                  {friend.avatar}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium truncate">{friend.name}</span>
-                    <span className="text-lg">{getStatusEmoji(friend.status)}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{formatTime(friend.screenTime)} today</span>
-                    {friend.streak > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        🔥 {friend.streak} days
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <div className={`text-xs font-medium ${getStatusColor(friend.status)}`}>
-                  {friend.status === 'champion' && '👑'}
-                  {friend.status === 'good' && '✨'}
-                  {friend.status === 'struggling' && '😅'}
-                  {friend.status === 'danger' && '🆘'}
-                </div>
+      {/* Friends Daily Activity */}
+      {dailyLoading && !dailyActivityData ? (
+        <Card className="border-0 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <span className="text-sm text-gray-500">Loading friends activity...</span>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+          </CardContent>
+        </Card>
+      ) : dailyActivityData ? (
+        <FriendsDailyActivity 
+          data={dailyActivityData.dailyActivity}
+          totalFriends={dailyActivityData.totalFriends}
+          onRefresh={refetchDaily}
+          loading={dailyLoading}
+        />
+      ) : null}
 
 
     </div>
